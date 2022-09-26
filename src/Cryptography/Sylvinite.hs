@@ -2,9 +2,7 @@ module Cryptography.Sylvinite (getRandomBytes) where
 
 import Cryptography.Sodium.Bindings.Random
 import Data.ByteString
-import Foreign.Marshal.Alloc
-import Foreign.Ptr
-import Foreign.Storable
+import Foreign.Marshal.Array
 
 -- | Generate an amount of random bytes.
 -- In `cryptonite`, IO and ByteString are replaced with the typeclasses 
@@ -13,10 +11,8 @@ import Foreign.Storable
 -- instances.
 getRandomBytes :: Int -> IO ByteString
 getRandomBytes bytes = do
-  firstPtr <- mallocBytes bytes
-  randombytesBuf firstPtr (toEnum bytes)
-  let arrayFunctions = (plusPtr firstPtr) <$> [0..bytes]
-  result <- sequence $ peek <$> arrayFunctions
-  sequence_ $ free <$> arrayFunctions
+  ptr <- mallocArray bytes
+  randombytesBuf ptr (toEnum bytes)
+  result <- peekArray bytes ptr
   return $ pack result
       
