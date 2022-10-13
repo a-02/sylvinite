@@ -60,8 +60,9 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  
-      Cryptography.Sylvinite,
-      Cryptography.Sylvinite.Scrypt
+      Cryptography.Sylvinite.Random,
+      Cryptography.Sylvinite.Internal,
+      Cryptography.Sylvinite.Replace.Scrypt
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -74,7 +75,9 @@ library
         base >=4.14.3.0,
         cryptography-libsodium-bindings,
         ghc-prim,
-        bytestring
+        witch,
+        bytestring,
+        base64-bytestring
 
 
     -- Directories containing source files.

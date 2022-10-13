@@ -1,4 +1,4 @@
-module Cryptography.Sylvinite (getRandomBytes) where
+module Cryptography.Sylvinite.Random (getRandomBytes) where
 
 import Cryptography.Sodium.Bindings.Random
 import Data.ByteString

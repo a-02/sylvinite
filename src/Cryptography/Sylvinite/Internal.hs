@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cryptography.Sylvinite.Scrypt where
+module Cryptography.Sylvinite.Internal where
 
 import Cryptography.Sodium.Bindings.Scrypt
 import Data.Bits (popCount)
@@ -25,7 +25,7 @@ import System.IO.Unsafe
 -- 
 -- outputLength is "Output Length". This is measured in bytes, not characters.
 data Parameters = Parameters
-  { n            :: Word64
+  { n            :: Int
   , r            :: Int
   , p            :: Int
   , outputLength :: Int
@@ -34,6 +34,8 @@ data Parameters = Parameters
 -- | In the version of this function present in `cryptonite`, there were
 -- 3 typeclasses present in the arguments and return type. These have been
 -- eliminated to their most common usage.`
+
+{-
 generate :: Parameters -> ByteString -> ByteString -> ByteString
 generate parameters password salt
   | r parameters * p parameters >= 0x40000000 =
@@ -61,3 +63,4 @@ generate parameters password salt
       result <- peekArray (outputLength parameters) out
       let result' = BS.pack $ coerce <$> result
       return result'
+-}
