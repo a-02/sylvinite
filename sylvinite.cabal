@@ -77,7 +77,8 @@ library
         ghc-prim,
         witch,
         bytestring,
-        base64-bytestring
+        base64-bytestring,
+        transformers
 
 
     -- Directories containing source files.
