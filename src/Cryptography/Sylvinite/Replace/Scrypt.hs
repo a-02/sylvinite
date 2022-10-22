@@ -13,6 +13,8 @@ import Cryptography.Sodium.Bindings.Scrypt
 import Cryptography.Sylvinite.Random
 import Cryptography.Sylvinite.Internal
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Base64 as BS64
 import Data.Word
 import Foreign.C.Types
 import Foreign.Marshal.Array
@@ -33,26 +35,48 @@ newSalt = Salt <$> getRandomBytes 32
 defaultParams :: ScryptParams
 defaultParams = Parameters 14 8 1 64
 
+scryptParams n r p = scryptParamsLen n r p 64
 
--- This needs to get implemented before anything else.
-scrypt :: Salt -> Pass -> PassHash
+scryptParamsLen n r p len = Parameters n r p len
+
+scrypt' :: Salt -> Pass -> PassHash
 scrypt' = scrypt defaultParams
 
 scrypt :: ScryptParams -> Salt -> Pass -> PassHash
 scrypt params salt passwd -- Arguments reverse for backwards compatibility.
-  | (BS.length . getPass $ passwd) > (fromIntegral cryptoPWHashScryptSalsa2018SHA256PasswdMax) = error "Password longer than maximum length."
-  | outputLength params > (fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMax) = error "Output longer than maximum length."
-  | outputLength params < (fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMin) = error "Output shorter than minimum length."
+  | (BS.length . getPass $ passwd) > (fromIntegral cryptoPWHashScryptSalsa2018SHA256PasswdMax) = 
+      error "Password longer than maximum length."
+  | outputLength params > (fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMax) = 
+      error "Output longer than maximum length."
+  | outputLength params < (fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMin) = 
+      error "Output shorter than minimum length."
   | (r params) * (p params) > 2^30 = error "r times p should be less than 2^30."
   -- its probably best to catch these errors before sodium.h
   | otherwise = unsafePerformIO $ hashPasswordLL passwd salt params
 
-{- Why did I need this? 
-withScrypt :: Ptr CChar -> (Ptr CUChar -> IO b) -> IO b
-withScrypt passwdPtr action = do
-  let size = fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMin  
-  allocaBytes size action
--}
+combine :: ScryptParams -> Salt -> PassHash -> EncryptedPass
+combine Parameters{..} (Salt salt) (PassHash hash) = EncryptedPass $ BS.intercalate "|"
+  [ showBS n
+  , showBS r
+  , showBS p
+  , BS64.encode salt
+  , BS64.encode hash
+  ]
+  where showBS = BS8.pack . show
+
+encryptPass :: ScryptParams -> Salt -> Pass -> EncryptedPass
+encryptPass params salt pass = combine params salt (scrypt params salt pass)
+
+encryptPass' :: Salt -> Pass -> EncryptedPass
+encryptPass' = encryptPass defaultParams
+
+encryptPassIO :: ScryptParams -> Pass -> IO EncryptedPass
+encryptPassIO params pass = do
+    salt <- newSalt
+    return $ encryptPass params salt pass
+
+encryptPassIO' :: Pass -> IO EncryptedPass
+encryptPassIO' = encryptPassIO defaultParams
 
 -- sizeOf is the correct way to turn a CSize into some usable value. i'm sure of it.
 hashPasswordLL :: Pass -> Salt -> ScryptParams -> IO PassHash     
@@ -102,18 +126,6 @@ foreign import capi "sodium.h crypto_pwhash_scryptsalsa208sha256_ll"
     -- | Exit code.
     IO CInt
     
-{- Don't look here. It is shameful. 
-  allocaBytes size $ 
-   \passwdPtr -> do 
-     poke passwdPtr passwd 
-     allocaBytes outlen $
-       \keyPtr -> do
-         allocaBytes saltlen $
-           \saltPtr -> do
-              poke saltPtr salt 
-              hashAction keyPtr passwdPtr saltPtr
--}
-
 {- Questions yet to be answered:
 
 Should `combine` and `separate` be implemented in terms of libsodium's password storage?
@@ -121,7 +133,5 @@ Should `combine` and `separate` be implemented in terms of libsodium's password 
 How about `verifyPass`?
 
 -}
-
--- encryptPassIO'
 
 -- verifyPass'
