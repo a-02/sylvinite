@@ -64,6 +64,37 @@ combine Parameters{..} (Salt salt) (PassHash hash) = EncryptedPass $ BS.intercal
   ]
   where showBS = BS8.pack . show
 
+separate :: EncryptedPass -> Maybe (ScryptParams, Salt, PassHash)
+separate = go . BS8.split '|' . getEncryptedPass
+  where
+    go [logN', r', p', salt', hash'] = do
+        [salt, hash] <- mapM decodeBase64 [salt', hash']
+        [logN, r, p] <- mapM (fmap fst . BS8.readInt) [logN', r', p']
+        let bufLen = fromIntegral (BS.length hash)
+        params       <- Just $ scryptParamsLen logN r p bufLen
+        return (params, Salt salt, PassHash hash)
+    go _         = Nothing
+    decodeBase64 = either (const Nothing) Just . BS64.decode
+
+verifyPass'' newParams candidate encrypted =
+    maybe (False, Nothing) verify (separate encrypted)
+  where
+    verify (params,salt,hash) =
+        let valid   = scrypt params salt candidate == hash
+            newHash = scrypt newParams salt candidate
+            newEncr = if not valid || params == newParams
+                        then Nothing
+                        else Just (combine newParams salt newHash)
+        in (valid, newEncr)
+{-
+verifyPass :: ScryptParams -> Pass -> EncryptedPass -> (Bool, Maybe EncryptedPass)
+verifyPass newParams pass encrypted =
+  let (oldParams, salt, hash) = separate encrypted
+      validate 
+   in 
+-}
+
+ 
 encryptPass :: ScryptParams -> Salt -> Pass -> EncryptedPass
 encryptPass params salt pass = combine params salt (scrypt params salt pass)
 

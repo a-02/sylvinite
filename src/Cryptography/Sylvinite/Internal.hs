@@ -3,7 +3,7 @@
 module Cryptography.Sylvinite.Internal where
 
 import Cryptography.Sodium.Bindings.Scrypt
-import Data.Bits (popCount)
+import Data.Bits (shift)
 import Data.Word
 import Data.ByteString as BS
 import Foreign.C.Types
@@ -29,38 +29,25 @@ data Parameters = Parameters
   , r            :: Int
   , p            :: Int
   , outputLength :: Int
-  }
+  } deriving (Eq, Show)
 
--- | In the version of this function present in `cryptonite`, there were
--- 3 typeclasses present in the arguments and return type. These have been
--- eliminated to their most common usage.`
+pickparams ::
+  Word64 -> -- opslimit CULLong
+  Word64 -> -- memlimit CSize
+  (Word32, Word32, Word32)
+pickparams opslimit' memlimit =
+  let opslimit = if opslimit' < 32768 then 32768 else opslimit'
+      getN maxN = last $ unfoldr (\n -> if 2^n > maxN then Nothing else Just (n, n+1))  -- find largest 2^n less than maxN / 2, n < 63
+      go opslimit n = 
+        let maxRP = if (opslimit / 4) / (shift 1 n) > 0x3fffffff
+                    then 0x3fffffff
+                    else (opslimit / 4) / (shift 1 n)
+         in (n, 8, maxRP / 8)
+   in if opslimit < (memlimit / 32)
+      then go opslimit (getN $ opslimit / 32) 
+      else go opslimit (getN $ memlimit / 1024) 
 
-{-
-generate :: Parameters -> ByteString -> ByteString -> ByteString
-generate parameters password salt
-  | r parameters * p parameters >= 0x40000000 =
-      error "Scrypt: Invalid parameters, r * p exceeds 2^30."
-  | popCount (n parameters) /= 1 =
-      error "Scrypt: Invalid parameters, n is not a power of 2."
-  | otherwise = unsafePerformIO $ do
-      let (outlen :: CULLong)    = toEnum (outputLength parameters)
-          (passwdlen :: CChar)   = toEnum (BS.length password)
-          (password' :: [CChar]) = (toEnum . fromEnum) <$> (BS.unpack password)
-          (salt' :: [CUChar])    = coerce <$> (BS.unpack salt)
-          opslimit = coerce cryptoPWHashScryptSalsa2018SHA256OpsLimitInteractive
-          memlimit = cryptoPWHashScryptSalsa2018SHA256MemLimitInteractive
-      out <- mallocArray (outputLength parameters)
-      passwd <- newArray password'
-      salt_ <- newArray salt' 
-      _ <- cryptoPWHashScryptSalsa2018SHA256
-             out
-             outlen 
-             passwd
-             passwdlen
-             salt_
-             opslimit
-             memlimit
-      result <- peekArray (outputLength parameters) out
-      let result' = BS.pack $ coerce <$> result
-      return result'
--}
+-- this turns (opslimit, memlimit) into (n, r, p)
+-- how do i turn (n, r, p) into (opslimit, memlimit)
+
+
