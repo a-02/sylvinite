@@ -1,2 +1,4 @@
 packages: ., ../cryptography-libsodium-bindings
 
+package sylvinite 
+  ghc-options: -Werror
