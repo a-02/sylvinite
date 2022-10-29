@@ -61,6 +61,9 @@ common properties
 library
     -- Import common warning flags.
     import: properties
+    c-sources: ./cbits/*
+    -- cc-options: -ffast-math -std=gnu99
+    include-dirs: include/*
 
     -- Modules exported by the library.
     exposed-modules:  

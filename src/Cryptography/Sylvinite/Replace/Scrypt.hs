@@ -3,6 +3,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE CApiFFI #-}
 
+{-
+
+The below code contains functions written by Falko Peters without modification.
+This is already noted in the license, but I feel it's needed to reiterate here.
+
+-}
+
 module Cryptography.Sylvinite.Replace.Scrypt where
 
 -- This module is meant to replace most of
@@ -76,7 +83,8 @@ separate = go . BS8.split '|' . getEncryptedPass
     go _         = Nothing
     decodeBase64 = either (const Nothing) Just . BS64.decode
 
-verifyPass'' newParams candidate encrypted =
+verifyPass :: ScryptParams -> Pass -> EncryptedPass -> (Bool, Maybe EncryptedPass)
+verifyPass newParams candidate encrypted =
     maybe (False, Nothing) verify (separate encrypted)
   where
     verify (params,salt,hash) =
@@ -86,14 +94,9 @@ verifyPass'' newParams candidate encrypted =
                         then Nothing
                         else Just (combine newParams salt newHash)
         in (valid, newEncr)
-{-
-verifyPass :: ScryptParams -> Pass -> EncryptedPass -> (Bool, Maybe EncryptedPass)
-verifyPass newParams pass encrypted =
-  let (oldParams, salt, hash) = separate encrypted
-      validate 
-   in 
--}
 
+verifyPass' :: Pass -> EncryptedPass -> Bool
+verifyPass' pass encrypted = fst $ verifyPass undefined pass encrypted
  
 encryptPass :: ScryptParams -> Salt -> Pass -> EncryptedPass
 encryptPass params salt pass = combine params salt (scrypt params salt pass)
