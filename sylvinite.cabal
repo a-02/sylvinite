@@ -111,5 +111,5 @@ test-suite sylvinite-test
 
     -- Test dependencies.
     build-depends:
-        base ^>=4.14.3.0,
+        base >=4.14.3.0,
         sylvinite
