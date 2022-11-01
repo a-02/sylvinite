@@ -1,8 +1,4 @@
-packages: .
-
-source-repository-package
-  type: git
-  location: https://github.com/haskell-cryptography/cryptography-libsodium-bindings 
+packages: ., ../cryptography-libsodium-bindings
 
 package sylvinite 
   ghc-options: -Werror

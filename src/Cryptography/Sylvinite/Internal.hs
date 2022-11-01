@@ -2,14 +2,9 @@
 
 module Cryptography.Sylvinite.Internal where
 
-import Cryptography.Sodium.Bindings.Scrypt
 import Data.Bits (shift)
 import Data.Word
 import Data.ByteString as BS
-import Foreign.C.Types
-import Foreign.Marshal.Array
-import GHC.Prim
-import System.IO.Unsafe
 
 -- | These are identical to `cryptonite`'s scrypt parameters for easy
 -- replacement. 
@@ -37,15 +32,15 @@ pickparams ::
   (Word32, Word32, Word32)
 pickparams opslimit' memlimit =
   let opslimit = if opslimit' < 32768 then 32768 else opslimit'
-      getN maxN = last $ unfoldr (\n -> if 2^n > maxN then Nothing else Just (n, n+1))  -- find largest 2^n less than maxN / 2, n < 63
-      go opslimit n = 
-        let maxRP = if (opslimit / 4) / (shift 1 n) > 0x3fffffff
+      getN maxN = fromIntegral . BS.last $ unfoldr (\a -> if 2^a > maxN then Nothing else Just (a, a+1)) 1 -- find largest 2^n less than maxN / 2, n < 63
+      go (ops :: Word64) n' = 
+        let maxRP = if (ops `div` 4) `div` (shift 1 n') > 0x3fffffff
                     then 0x3fffffff
-                    else (opslimit / 4) / (shift 1 n)
-         in (n, 8, maxRP / 8)
-   in if opslimit < (memlimit / 32)
-      then go opslimit (getN $ opslimit / 32) 
-      else go opslimit (getN $ memlimit / 1024) 
+                    else (ops `div` 4) `div` (shift 1 n')
+         in (fromIntegral n', 8, fromIntegral $ maxRP `div` 8)
+   in if opslimit < (memlimit `div` 32)
+      then go opslimit (getN $ opslimit `div` 32) 
+      else go opslimit (getN $ memlimit `div` 1024) 
 
 -- this turns (opslimit, memlimit) into (n, r, p)
 -- how do i turn (n, r, p) into (opslimit, memlimit)

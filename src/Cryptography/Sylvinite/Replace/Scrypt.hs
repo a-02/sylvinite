@@ -15,7 +15,7 @@ module Cryptography.Sylvinite.Replace.Scrypt where
 -- This module is meant to replace most of
 -- `scrypt`'s Crypto.Scrypt.
 
-import Control.Monad.Trans.Cont
+-- import Control.Monad.Trans.Cont
 import Cryptography.Sodium.Bindings.Scrypt
 import Cryptography.Sylvinite.Random
 import Cryptography.Sylvinite.Internal
@@ -42,8 +42,10 @@ newSalt = Salt <$> getRandomBytes 32
 defaultParams :: ScryptParams
 defaultParams = Parameters 14 8 1 64
 
+scryptParams :: Int -> Int -> Int -> Parameters
 scryptParams n r p = scryptParamsLen n r p 64
 
+scryptParamsLen :: Int -> Int -> Int -> Int -> Parameters
 scryptParamsLen n r p len = Parameters n r p len
 
 scrypt' :: Salt -> Pass -> PassHash
@@ -57,7 +59,7 @@ scrypt params salt passwd -- Arguments reverse for backwards compatibility.
       error "Output longer than maximum length."
   | outputLength params < (fromIntegral cryptoPWHashScryptSalsa2018SHA256BytesMin) = 
       error "Output shorter than minimum length."
-  | (r params) * (p params) > 2^30 = error "r times p should be less than 2^30."
+  | (r params) * (p params) > 2^(30::Int) = error "r times p should be less than 2^30." -- hey! i dont like this!
   -- its probably best to catch these errors before sodium.h
   | otherwise = unsafePerformIO $ hashPasswordLL passwd salt params
 
@@ -122,7 +124,7 @@ hashPasswordLL (Pass passwd) (Salt salt) Parameters{..} = do
         (len passwdPtr)
         saltPtr
         (len saltPtr)
-        (fromIntegral $ 2^n)
+        (2^n)
         (fromIntegral r)
         (fromIntegral p)
         keyPtr
@@ -163,9 +165,9 @@ foreign import capi "sodium.h crypto_pwhash_scryptsalsa208sha256_ll"
 {- Questions yet to be answered:
 
 Should `combine` and `separate` be implemented in terms of libsodium's password storage?
+Answer: No. Do you know how hard it is to undo pickparams?
 
-How about `verifyPass`?
+Should verifyPass be done using libsodium's verification?
+Answer: No. See above.
 
 -}
-
--- verifyPass'

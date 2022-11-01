@@ -54,16 +54,10 @@ extra-doc-files:    CHANGELOG.md
 common properties
     ghc-options:
        -Wall
-       -dynamic
-       -shared
-       -fPIC
 
 library
     -- Import common warning flags.
     import: properties
-    c-sources: ./cbits/*
-    -- cc-options: -ffast-math -std=gnu99
-    include-dirs: include/*
 
     -- Modules exported by the library.
     exposed-modules:  
@@ -82,10 +76,9 @@ library
         base >=4.14.3.0,
         cryptography-libsodium-bindings,
         ghc-prim,
-        witch,
         bytestring,
         base64-bytestring,
-        transformers
+        text
 
 
     -- Directories containing source files.
